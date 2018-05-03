@@ -1,6 +1,6 @@
 #!/bin/bash
-. /etc/openvpn/scripts/config.sh
-. /etc/openvpn/scripts/functions.sh
+. /etc/openvpn/server/scripts/config.sh
+. /etc/openvpn/server/scripts/functions.sh
 
 username=$(echap "$username")
 password=$(echap "$password")
