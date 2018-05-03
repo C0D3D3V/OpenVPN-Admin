@@ -17,7 +17,7 @@ if [ "$#" -ne 1 ]; then
   exit
 fi
 
-www="$1/openvpn-admin"
+www="$1"
 
 if [ ! -d "$www" ]; then
   print_help
@@ -40,9 +40,9 @@ cd "$www" || exit
 bower --allow-root install
 chown -R "$user:$group" "$www"
 
-rm -f "/etc/openvpn/scripts/"{connect.sh,disconnect.sh,login.sh,functions.sh}
-cp "$base_path/installation/scripts/"{connect.sh,disconnect.sh,login.sh,functions.sh} "/etc/openvpn/scripts"
-chmod +x "/etc/openvpn/scripts/"{connect.sh,disconnect.sh,login.sh,functions.sh}
+rm -f "/etc/openvpn/server/scripts/"{connect.sh,disconnect.sh,login.sh,functions.sh}
+cp "$base_path/installation/scripts/"{connect.sh,disconnect.sh,login.sh,functions.sh} "/etc/openvpn/server/scripts"
+chmod +x "/etc/openvpn/server/scripts/"{connect.sh,disconnect.sh,login.sh,functions.sh}
 
 echo "Processing database migration..."
 

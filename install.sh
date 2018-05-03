@@ -32,7 +32,7 @@ www=$1
 user=$2
 group=$3
 
-openvpn_admin="$www/openvpn-admin"
+openvpn_admin="$www"
 
 # Check the validity of the arguments
 if [ ! -d "$www" ] ||  ! grep -q "$user" "/etc/passwd" || ! grep -q "$group" "/etc/group" ; then
@@ -46,12 +46,6 @@ base_path=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 printf "\n################## Server informations ##################\n"
 
 read -p "Server Hostname/IP: " ip_server
-
-read -p "OpenVPN protocol (tcp or udp) [tcp]: " openvpn_proto
-
-if [[ -z $openvpn_proto ]]; then
-  openvpn_proto="tcp"
-fi
 
 read -p "Port [443]: " server_port
 
@@ -128,9 +122,9 @@ EASYRSA_LATEST=${EASYRSA_RELEASES[0]}
 # Get the rsa keys
 wget -q https://github.com/OpenVPN/easy-rsa/releases/download/v${EASYRSA_LATEST}/EasyRSA-${EASYRSA_LATEST}.tgz
 tar -xaf EasyRSA-${EASYRSA_LATEST}.tgz
-mv EasyRSA-${EASYRSA_LATEST} /etc/openvpn/easy-rsa
+mv EasyRSA-${EASYRSA_LATEST} /etc/openvpn/server/easy-rsa
 rm -r EasyRSA-${EASYRSA_LATEST}.tgz
-cd /etc/openvpn/easy-rsa
+cd /etc/openvpn/server/easy-rsa
 
 if [[ ! -z $key_size ]]; then
   export EASYRSA_KEY_SIZE=$key_size
@@ -178,37 +172,41 @@ openvpn --genkey --secret pki/ta.key
 printf "\n################## Setup OpenVPN ##################\n"
 
 # Copy certificates and the server configuration in the openvpn directory
-cp /etc/openvpn/easy-rsa/pki/{ca.crt,ta.key,issued/server.crt,private/server.key,dh.pem} "/etc/openvpn/"
-cp "$base_path/installation/server.conf" "/etc/openvpn/"
-mkdir "/etc/openvpn/ccd"
-sed -i "s/port 443/port $server_port/" "/etc/openvpn/server.conf"
-
-if [ $openvpn_proto = "udp" ]; then
-  sed -i "s/proto tcp/proto $openvpn_proto/" "/etc/openvpn/server.conf"
-fi
+cp /etc/openvpn/server/easy-rsa/pki/{ca.crt,ta.key,issued/server.crt,private/server.key,dh.pem} "/etc/openvpn/server/"
+cp "$base_path/installation/server.conf" "/etc/openvpn/server/"
+mkdir "/etc/openvpn/server/ccd"
+sed -i "s/port 443/port $server_port/" "/etc/openvpn/server/server.conf"
 
 nobody_group=$(id -ng nobody)
-sed -i "s/group nogroup/group $nobody_group/" "/etc/openvpn/server.conf"
+sed -i "s/group nogroup/group $nobody_group/" "/etc/openvpn/server/server.conf"
 
 printf "\n################## Setup firewall ##################\n"
 
 # Make ip forwading and make it persistent
-echo 1 > "/proc/sys/net/ipv4/ip_forward"
-echo "net.ipv4.ip_forward = 1" >> "/etc/sysctl.conf"
+#echo 1 > "/proc/sys/net/ipv4/ip_forward"
+#echo "net.ipv4.ip_forward = 1" >> "/etc/sysctl.conf"
+echo "net.ipv4.ip_forward=1" >> "/etc/sysctl.d/30-ipforward.conf"
+echo "net.ipv6.conf.default.forwarding=1" >> "/etc/sysctl.d/30-ipforward.conf"
+echo "net.ipv6.conf.all.forwarding=1" >> "/etc/sysctl.d/30-ipforward.conf"
+
 
 # Get primary NIC device name
-primary_nic=`route | grep '^default' | grep -o '[^ ]*$'`
+#primary_nic=`route | grep '^default' | grep -o '[^ ]*$'`
 
 # Iptable rules
-iptables -I FORWARD -i tun0 -j ACCEPT
-iptables -I FORWARD -o tun0 -j ACCEPT
-iptables -I OUTPUT -o tun0 -j ACCEPT
+iptables -A INPUT -i eth0 -m state --state NEW -p udp --dport 9090 -j ACCEPT
+iptables -A INPUT -i tun+ -j ACCEPT
 
-iptables -A FORWARD -i tun0 -o $primary_nic -j ACCEPT
-iptables -t nat -A POSTROUTING -o $primary_nic -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o $primary_nic -j MASQUERADE
-iptables -t nat -A POSTROUTING -s 10.8.0.2/24 -o $primary_nic -j MASQUERADE
+iptables -A FORWARD -i tun+ -j ACCEPT
+iptables -A FORWARD -i tun+ -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth0 -o tun+ -m state --state RELATED,ESTABLISHED -j ACCEPT
 
+iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+
+iptables -A OUTPUT -o tun+ -j ACCEPT
+
+
+iptables-save > /etc/iptables/iptables.rules
 
 printf "\n################## Setup MySQL database ##################\n"
 
@@ -221,12 +219,12 @@ echo "FLUSH PRIVILEGES" | mysql -u root --password="$mysql_root_pass"
 printf "\n################## Setup web application ##################\n"
 
 # Copy bash scripts (which will insert row in MySQL)
-cp -r "$base_path/installation/scripts" "/etc/openvpn/"
-chmod +x "/etc/openvpn/scripts/"*
+cp -r "$base_path/installation/scripts" "/etc/openvpn/server/"
+chmod +x "/etc/openvpn/server/scripts/"*
 
 # Configure MySQL in openvpn scripts
-sed -i "s/USER=''/USER='$mysql_user'/" "/etc/openvpn/scripts/config.sh"
-sed -i "s/PASS=''/PASS='$mysql_pass'/" "/etc/openvpn/scripts/config.sh"
+sed -i "s/USER=''/USER='$mysql_user'/" "/etc/openvpn/server/scripts/config.sh"
+sed -i "s/PASS=''/PASS='$mysql_pass'/" "/etc/openvpn/server/scripts/config.sh"
 
 # Create the directory of the web application
 mkdir "$openvpn_admin"
@@ -242,15 +240,11 @@ sed -i "s/\$pass = '';/\$pass = '$mysql_pass';/" "./include/config.php"
 # Replace in the client configurations with the ip of the server and openvpn protocol
 for file in "./client-conf/gnu-linux/client.conf" "./client-conf/osx-viscosity/client.conf" "./client-conf/windows/client.ovpn"; do
   sed -i "s/remote xxx\.xxx\.xxx\.xxx 443/remote $ip_server $server_port/" $file
-
-  if [ $openvpn_proto = "udp" ]; then
-    sed -i "s/proto tcp-client/proto udp/" $file
-  fi
 done
 
 # Copy ta.key inside the client-conf directory
 for directory in "./client-conf/gnu-linux/" "./client-conf/osx-viscosity/" "./client-conf/windows/"; do
-  cp "/etc/openvpn/"{ca.crt,ta.key} $directory
+  cp "/etc/openvpn/server/"{ca.crt,ta.key} $directory
 done
 
 # Install third parties
