@@ -194,7 +194,7 @@ echo "net.ipv6.conf.all.forwarding=1" >> "/etc/sysctl.d/30-ipforward.conf"
 #primary_nic=`route | grep '^default' | grep -o '[^ ]*$'`
 
 # Iptable rules
-iptables -A INPUT -i eth0 -m state --state NEW -p udp --dport 9090 -j ACCEPT
+iptables -A INPUT -i eth0 -m state --state NEW -p udp --dport $server_port -j ACCEPT
 iptables -A INPUT -i tun+ -j ACCEPT
 
 iptables -A FORWARD -i tun+ -j ACCEPT
