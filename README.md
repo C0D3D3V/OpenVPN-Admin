@@ -32,7 +32,9 @@ Administrate its OpenVPN with a web interface (logs visualisations, users managi
 # mysql_secure_installation
 # systemctl enable php-fpm.service
 # systemctl start php-fpm.service
-```
+
+````
+
 Enable PHP Extensions: `mysqli pdo_mysql zip`
 
 ## Tests
