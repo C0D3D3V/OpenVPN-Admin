@@ -64,12 +64,12 @@ Only tested on Arch Linu. Feel free to open issues.
 ## Update
 
     $ git pull origin master
-    # ./update.sh /var/www
+    # ./update.sh /usr/share/nginx/vpn 
 
 ## Desinstall
 It will remove all installed components (OpenVPN keys and configurations, the web application, iptables rules...).
 
-    # ./desinstall.sh /var/www
+    # ./desinstall.sh /usr/share/nginx/vpn 
 
 ## Use of
 
