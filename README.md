@@ -22,53 +22,37 @@ Administrate its OpenVPN with a web interface (logs visualisations, users managi
   * sed
   * curl
 
-### Debian 8 Jessie
+### Arch Linux 
 
 ````
-# apt-get install openvpn apache2 php5-mysql mysql-server php5 nodejs unzip git wget sed npm curl
-# npm install -g bower
-# ln -s /usr/bin/nodejs /usr/bin/node
-````
-
-### Debian 9 Stretch
-
-````
-# apt-get install openvpn openvpn apache2 php-mysql mysql-server php-zip php nodejs unzip git wget sed npm curl
-# npm install -g bower
-# ln -s /usr/bin/nodejs /usr/bin/node
-````
-
-### CentOS 7
-
-````
-# yum install epel-release
-# yum install openvpn httpd php-mysql mariadb-server php nodejs unzip git wget sed npm
-# npm install -g bower
+# pacman -S bower php mariadb openvpn php-fpm net-tools nginx
+# mysql_install_db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 # systemctl enable mariadb
 # systemctl start mariadb
-````
-
-### Other distribution... (PR welcome)
+# mysql_secure_installation
+# systemctl enable php-fpm.service
+# systemctl start php-fpm.service
+```
+Enable PHP Extensions: `mysqli pdo_mysql zip`
 
 ## Tests
 
-Only tested on Debian Jessie. Feel free to open issues.
+Only tested on Arch Linu. Feel free to open issues.
 
 ## Installation
 
   * Setup OpenVPN and the web application:
 
-        $ cd ~/my_coding_workspace
-        $ git clone https://github.com/Chocobozzz/OpenVPN-Admin openvpn-admin
-        $ cd openvpn-admin
-        # ./install.sh /var/www www-data www-data
+        $ git clone  https://github.com/C0D3D3V/OpenVPN-Admin.git
+        $ cd OpenVPN-Admin
+        # ./install.sh /usr/share/nginx/vpn http http
 
   * Setup the web server (Apache, NGinx...) to serve the web application.
   * Create the admin of the web application by visiting `http://your-installation/index.php?installation`
 
 ## Usage
 
-  * Start OpenVPN on the server (for example `systemctl start openvpn@server`)
+  * Start OpenVPN on the server (for example `systemctl start openvpn-server@server`)
   * Connect to the web application as an admin
   * Create an user
   * User get the configurations files via the web application (and put them in */etc/openvpn*)
